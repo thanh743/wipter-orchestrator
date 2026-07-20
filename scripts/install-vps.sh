@@ -161,7 +161,7 @@ EOF
   log "Creating dashboard password file"
   mkdir -p frontend
   printf "%s:%s\n" "$DASHBOARD_USER" "$(openssl passwd -apr1 "$DASHBOARD_PASSWORD")" > frontend/.htpasswd
-  chmod 600 frontend/.htpasswd
+  chmod 644 frontend/.htpasswd
 }
 
 configure_firewall() {
