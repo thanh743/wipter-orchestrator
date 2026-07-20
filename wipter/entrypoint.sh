@@ -3,6 +3,7 @@ set -euo pipefail
 
 export HOME="${HOME:-/root}"
 export DISPLAY="${DISPLAY:-:99}"
+VNC_PASSWORD="${VNC_PASSWORD:-$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)}"
 
 log() {
   printf '[wipter] %s\n' "$*"
@@ -16,7 +17,7 @@ trap cleanup TERM INT
 Xvfb "$DISPLAY" -screen 0 1280x900x24 -nolisten tcp &
 sleep 1
 openbox >/tmp/openbox.log 2>&1 &
-x11vnc -display "$DISPLAY" -localhost -nopw -forever -shared >/tmp/x11vnc.log 2>&1 &
+x11vnc -display "$DISPLAY" -localhost -passwd "$VNC_PASSWORD" -forever -shared >/tmp/x11vnc.log 2>&1 &
 
 log "Xvfb ready on ${DISPLAY}"
 log "Wipter app launching"

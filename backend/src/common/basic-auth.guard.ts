@@ -9,10 +9,13 @@ export class BasicAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
     const username = this.config.get<string>('BASIC_AUTH_USER');
     const password = this.config.get<string>('BASIC_AUTH_PASSWORD');
-    if (!username || !password) return true;
-
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
+    if (!username || !password) {
+      response.setHeader('WWW-Authenticate', 'Basic realm="Orchestrator"');
+      response.status(503).send('Basic auth is not configured');
+      return false;
+    }
     const header = request.headers.authorization || '';
     const [scheme, encoded] = header.split(' ');
     const decoded = scheme === 'Basic' && encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';

@@ -2,16 +2,17 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: wipter-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-earnapp_orchestrator}
-      POSTGRES_USER: ${POSTGRES_USER:-earnapp}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-earnapp_dev_password}
+      POSTGRES_DB: 
+      POSTGRES_USER: 
+      POSTGRES_PASSWORD: 
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-earnapp} -d ${POSTGRES_DB:-earnapp_orchestrator}"]
+      test: ["CMD-SHELL", "pg_isready -U  -d "]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,6 +25,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: wipter-redis
+    restart: unless-stopped
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     healthcheck:
@@ -42,6 +44,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: wipter-backend
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -86,6 +89,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     container_name: wipter-frontend
+    restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     volumes:

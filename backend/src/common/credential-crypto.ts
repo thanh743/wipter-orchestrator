@@ -11,8 +11,15 @@ function keyFromSecret(secret: string, salt: Buffer) {
   return scryptSync(secret, salt, 32);
 }
 
+function assertEncryptionSecret(secret: string) {
+  if (!secret || secret.startsWith('change-me')) {
+    throw new Error('PROXY_SECRET_KEY must be set to a strong non-default value before saving secrets');
+  }
+}
+
 export function encryptSecret(value: string | undefined, secret: string) {
-  if (!value || value.startsWith(PREFIX_V1) || value.startsWith(PREFIX_V2) || !secret || secret.startsWith('change-me')) return value;
+  if (!value || value.startsWith(PREFIX_V1) || value.startsWith(PREFIX_V2)) return value;
+  assertEncryptionSecret(secret);
   const iv = randomBytes(12);
   const salt = randomBytes(16);
   const cipher = createCipheriv('aes-256-gcm', keyFromSecret(secret, salt), iv);
@@ -24,6 +31,7 @@ export function encryptSecret(value: string | undefined, secret: string) {
 export function decryptSecret(value: string | undefined, secret: string) {
   if (!value) return value;
   if (value.startsWith(PREFIX_V2)) {
+    assertEncryptionSecret(secret);
     const raw = Buffer.from(value.slice(PREFIX_V2.length), 'base64');
     const salt = raw.subarray(0, 16);
     const iv = raw.subarray(16, 28);
@@ -34,6 +42,7 @@ export function decryptSecret(value: string | undefined, secret: string) {
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
   }
   if (!value.startsWith(PREFIX_V1)) return value;
+  assertEncryptionSecret(secret);
   const raw = Buffer.from(value.slice(PREFIX_V1.length), 'base64');
   const iv = raw.subarray(0, 12);
   const tag = raw.subarray(12, 28);

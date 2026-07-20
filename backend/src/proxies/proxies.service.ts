@@ -36,14 +36,7 @@ export class ProxiesService {
     for (const line of lines) {
       try {
         const parsed = parseProxyLine(line);
-        const existing = await this.proxies.findOne({
-          where: {
-            type: parsed.type,
-            host: parsed.host,
-            port: parsed.port,
-            username: parsed.username,
-          },
-        });
+        const existing = await this.findExisting(parsed.type, parsed.host, parsed.port, parsed.username);
         if (existing) {
           errors.push({ line, error: `Proxy already exists as ${existing.label}` });
           continue;
@@ -86,5 +79,21 @@ export class ProxiesService {
       .map((proxy) => Number(proxy.label.match(new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)$`))?.[1] ?? 0))
       .filter((value) => Number.isFinite(value));
     return Math.max(0, ...indexes) + 1;
+  }
+
+  private findExisting(type: Proxy['type'], host: string, port: number, username?: string) {
+    const query = this.proxies
+      .createQueryBuilder('proxy')
+      .where('proxy.type = :type', { type })
+      .andWhere('proxy.host = :host', { host })
+      .andWhere('proxy.port = :port', { port });
+
+    if (username) {
+      query.andWhere('proxy.username = :username', { username });
+    } else {
+      query.andWhere('proxy.username IS NULL');
+    }
+
+    return query.getOne();
   }
 }

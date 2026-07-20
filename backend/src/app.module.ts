@@ -38,7 +38,7 @@ import { Proxy } from './proxies/proxy.entity';
         password: config.get('POSTGRES_PASSWORD', 'earnapp_dev_password'),
         database: config.get('POSTGRES_DB', 'earnapp_orchestrator'),
         entities: [Proxy, Earner, Earning, HealthEvent, AuditLog, ProviderAccount],
-        synchronize: true,
+        synchronize: config.get('DB_SYNCHRONIZE', 'false') === 'true',
       }),
     }),
     BullModule.forRootAsync({

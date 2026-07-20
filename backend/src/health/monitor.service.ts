@@ -12,6 +12,7 @@ import { HealthEvent } from './health-event.entity';
 @Injectable()
 export class MonitorService {
   private readonly logger = new Logger(MonitorService.name);
+  private isChecking = false;
 
   constructor(
     @InjectRepository(Earner) private readonly earners: Repository<Earner>,
@@ -23,9 +24,15 @@ export class MonitorService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async healthCheck() {
-    const running = await this.earners.find({ where: { status: EarnerStatus.Running } });
-    for (const earner of running) {
-      try {
+    if (this.isChecking) {
+      this.logger.warn('Skipping overlapping health check');
+      return;
+    }
+    this.isChecking = true;
+    try {
+      const running = await this.earners.find({ where: { status: EarnerStatus.Running } });
+      for (const earner of running) {
+        try {
         const sidecarRunning = await this.docker.getContainerRunning(earner.sidecarContainerId);
         const appRunning = await this.docker.getContainerRunning(earner.earnerContainerId);
         if (!sidecarRunning || !appRunning) {
@@ -86,26 +93,40 @@ export class MonitorService {
           });
           await this.alerts.send(`Wipter Orchestrator: ${earner.proxy?.label || earner.id} is not connected (${runtime.summary}).`);
         }
-      } catch (error) {
+        } catch (error) {
         const message = error instanceof Error ? error.message : 'Monitor failed';
         this.logger.warn(message);
-        await this.docker.stop(earner.earnerContainerId).catch(() => undefined);
-        await this.docker.stop(earner.sidecarContainerId).catch(() => undefined);
-        await this.earners.update(earner.id, {
+        const trueLeak = this.isTrueLeakError(message);
+        if (trueLeak) {
+          await this.docker.stop(earner.earnerContainerId).catch(() => undefined);
+          await this.docker.stop(earner.sidecarContainerId).catch(() => undefined);
+        }
+        await this.earners.update(earner.id, trueLeak ? {
           status: EarnerStatus.Error,
           errorMessage: message,
           isConnected: false,
+        } : {
+          errorMessage: message,
         });
         await this.events.save({
-          level: HealthLevel.Error,
-          title: 'Leak check stopped earner',
+          level: trueLeak ? HealthLevel.Error : HealthLevel.Warning,
+          title: trueLeak ? 'Leak check stopped earner' : 'Health check warning',
           message: `${earner.proxy?.label || earner.id}: ${message}.`,
           earnerId: earner.id,
           proxyId: earner.proxyId,
         });
-        await this.alerts.send(`Wipter Orchestrator: ${earner.proxy?.label || earner.id} stopped by leak check (${message}).`);
+        await this.alerts.send(trueLeak
+          ? `Wipter Orchestrator: ${earner.proxy?.label || earner.id} stopped by leak check (${message}).`
+          : `Wipter Orchestrator: ${earner.proxy?.label || earner.id} health warning (${message}).`);
+        }
       }
+      this.gateway.emitRefresh();
+    } finally {
+      this.isChecking = false;
     }
-    this.gateway.emitRefresh();
+  }
+
+  private isTrueLeakError(message: string) {
+    return /egress leak detected|ipv6 leak detected/i.test(message);
   }
 }

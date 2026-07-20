@@ -16,7 +16,10 @@ export class EventsGateway implements OnGatewayConnection {
   handleConnection(client: Socket) {
     const username = process.env.BASIC_AUTH_USER;
     const password = process.env.BASIC_AUTH_PASSWORD;
-    if (!username || !password) return;
+    if (!username || !password) {
+      client.disconnect(true);
+      return;
+    }
 
     const header = client.handshake.headers.authorization || '';
     const [scheme, encoded] = header.split(' ');

@@ -43,16 +43,26 @@ export class AutomationProcessor extends WorkerHost implements OnApplicationShut
   private async provision(proxyId: string) {
     const proxy = await this.proxies.findOneByOrFail({ id: proxyId });
     const deviceId = `wipter-${randomBytes(16).toString('hex')}`;
-    let earner: Earner = await this.earners.save({
+    let earner: Earner = await this.earners.findOne({ where: { proxyId: proxy.id } }) ?? await this.earners.save({
       proxyId: proxy.id,
       earnappUuid: deviceId,
       status: EarnerStatus.Pending,
+    });
+    if (earner.sidecarContainerId || earner.earnerContainerId) {
+      await this.docker.remove(earner.earnerContainerId).catch(() => undefined);
+      await this.docker.remove(earner.sidecarContainerId).catch(() => undefined);
+    }
+    earner = await this.earners.save({
+      ...earner,
+      earnappUuid: earner.earnappUuid || deviceId,
+      status: EarnerStatus.Pending,
+      errorMessage: null,
     });
     let unit: CreatedUnit | undefined;
 
     try {
       await this.proxies.update(proxy.id, { status: ProxyStatus.Alive });
-      unit = await this.docker.createEarnerUnit(proxy, deviceId);
+      unit = await this.docker.createEarnerUnit(proxy, earner.earnappUuid);
       earner = await this.earners.save({
         ...earner,
         sidecarContainerId: unit.sidecarContainerId,
@@ -97,8 +107,8 @@ export class AutomationProcessor extends WorkerHost implements OnApplicationShut
       const message = error instanceof Error ? error.message : 'Provision failed';
       this.logger.error(message);
       if (unit) {
-        await this.docker.stop(unit.earnerContainerId).catch(() => undefined);
-        await this.docker.stop(unit.sidecarContainerId).catch(() => undefined);
+        await this.docker.remove(unit.earnerContainerId).catch(() => undefined);
+        await this.docker.remove(unit.sidecarContainerId).catch(() => undefined);
       }
       await this.earners.update(earner.id, { status: EarnerStatus.Error, errorMessage: message });
       await this.proxies.update(proxy.id, { status: ProxyStatus.Dead });
@@ -170,8 +180,8 @@ export class AutomationProcessor extends WorkerHost implements OnApplicationShut
       const message = error instanceof Error ? error.message : 'Reconnect failed';
       this.logger.error(message);
       if (unit) {
-        await this.docker.stop(unit.earnerContainerId).catch(() => undefined);
-        await this.docker.stop(unit.sidecarContainerId).catch(() => undefined);
+        await this.docker.remove(unit.earnerContainerId).catch(() => undefined);
+        await this.docker.remove(unit.sidecarContainerId).catch(() => undefined);
       }
       await this.earners.update(earner.id, {
         status: EarnerStatus.Error,

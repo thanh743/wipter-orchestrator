@@ -6,6 +6,7 @@ set -euo pipefail
 : "${PROXY_PORT:?PROXY_PORT is required}"
 : "${PROXY_USERNAME:=}"
 : "${PROXY_PASSWORD:=}"
+: "${PROXY_RESOLVED_HOST:=}"
 
 READY_FILE="/tmp/sidecar.ready"
 REDSOCKS_PORT="12345"
@@ -21,15 +22,13 @@ if [ "$PROXY_TYPE" = "http" ]; then
 fi
 
 ORIGINAL_PROXY_HOST="$PROXY_HOST"
-if ! echo "$PROXY_HOST" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
-  RESOLVED_PROXY_HOST="$(dig +short A "$PROXY_HOST" | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -n 1 || true)"
-  if [ -z "$RESOLVED_PROXY_HOST" ]; then
-    echo "PROXY_HOST could not be resolved to an IPv4 address: ${PROXY_HOST}" >&2
-    exit 1
-  fi
-  echo "Resolved proxy host ${PROXY_HOST} -> ${RESOLVED_PROXY_HOST}"
-  PROXY_HOST="$RESOLVED_PROXY_HOST"
+if [ -n "$PROXY_RESOLVED_HOST" ]; then
+  echo "Using pre-resolved proxy host ${PROXY_HOST} -> ${PROXY_RESOLVED_HOST}"
+  PROXY_HOST="$PROXY_RESOLVED_HOST"
   export PROXY_HOST
+elif ! echo "$PROXY_HOST" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
+  echo "PROXY_HOST must be an IPv4 address or PROXY_RESOLVED_HOST must be provided before sidecar startup" >&2
+  exit 1
 fi
 
 cat >/usr/local/bin/tcp_socks_proxy.py <<'PY'

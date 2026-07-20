@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Docker = require('dockerode');
+import { resolve4 } from 'dns/promises';
 import { decryptSecret } from '../common/credential-crypto';
 import { ProxyType } from '../common/enums';
 import { ProviderAccountService } from '../provider-account/provider-account.service';
@@ -102,7 +103,7 @@ export class DockerControlService {
         'earnapp-orchestrator.kind': 'sidecar',
         'earnapp-orchestrator.proxy-id': proxy.id,
       },
-      Env: this.sidecarEnv(proxy),
+      Env: await this.sidecarEnv(proxy),
       HostConfig: {
         CapAdd: ['NET_ADMIN'],
         Memory: this.mb('SIDECAR_MEMORY_MB', 128),
@@ -145,23 +146,30 @@ export class DockerControlService {
 
   async start(containerId?: string) {
     if (!containerId || this.dryRun) return;
-    await this.docker.getContainer(containerId).start();
+    try {
+      await this.docker.getContainer(containerId).start();
+    } catch (error) {
+      if (!this.isContainerGoneOrAlreadyChanged(error)) throw error;
+    }
   }
 
   async stop(containerId?: string) {
     if (!containerId || this.dryRun) return;
-    await this.docker.getContainer(containerId).stop({ t: 10 });
+    try {
+      await this.docker.getContainer(containerId).stop({ t: 10 });
+    } catch (error) {
+      if (!this.isContainerGoneOrAlreadyChanged(error)) throw error;
+    }
   }
 
   async remove(containerId?: string) {
     if (!containerId || this.dryRun) return;
     const container = this.docker.getContainer(containerId);
     try {
-      await container.stop({ t: 5 });
-    } catch {
-      // Already stopped.
+      await container.remove({ force: true });
+    } catch (error) {
+      if (!this.isContainerGoneOrAlreadyChanged(error)) throw error;
     }
-    await container.remove({ force: true });
   }
 
   async logs(containerId?: string) {
@@ -280,14 +288,24 @@ export class DockerControlService {
     throw new Error('Sidecar failed closed before becoming ready');
   }
 
-  private sidecarEnv(proxy: Proxy) {
+  private async sidecarEnv(proxy: Proxy) {
+    const resolvedHost = await this.resolveProxyHost(proxy.host);
     return [
       `PROXY_TYPE=${proxy.type === ProxyType.Socks5 ? 'socks5' : 'http'}`,
       `PROXY_HOST=${proxy.host}`,
+      `PROXY_RESOLVED_HOST=${resolvedHost}`,
       `PROXY_PORT=${proxy.port}`,
       `PROXY_USERNAME=${proxy.username || ''}`,
       `PROXY_PASSWORD=${decryptSecret(proxy.password, this.config.get('PROXY_SECRET_KEY', '')) || ''}`,
     ];
+  }
+
+  private async resolveProxyHost(host: string) {
+    if (this.isIpv4(host)) return host;
+    const addresses = await resolve4(host);
+    const first = addresses[0];
+    if (!first) throw new Error(`Cannot resolve proxy host ${host}`);
+    return first;
   }
 
   private number(name: string, fallback: number) {
@@ -389,6 +407,11 @@ export class DockerControlService {
   private wipterDeviceName(label: string) {
     const prefix = this.config.get('WIPTER_DEVICE_PREFIX', 'wipter');
     return `${prefix}-${label}`.replace(/[^a-zA-Z0-9_.-]/g, '-').slice(0, 64);
+  }
+
+  private isContainerGoneOrAlreadyChanged(error: unknown) {
+    const statusCode = (error as { statusCode?: number })?.statusCode;
+    return statusCode === 304 || statusCode === 404;
   }
 
   private async removeByName(name: string) {
