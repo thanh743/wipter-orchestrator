@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wipter-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-earnapp_orchestrator}
+      POSTGRES_USER: ${POSTGRES_USER:-earnapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-earnapp_dev_password}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-earnapp} -d ${POSTGRES_DB:-earnapp_orchestrator}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+        max-file: "${DOCKER_LOG_MAX_FILE:-3}"
+
+  redis:
+    image: redis:7-alpine
+    container_name: wipter-redis
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+        max-file: "${DOCKER_LOG_MAX_FILE:-3}"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: wipter-backend
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DRY_RUN_DOCKER: ${DRY_RUN_DOCKER:-false}
+    ports:
+      - "127.0.0.1:${APP_PORT:-4000}:4000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+        max-file: "${DOCKER_LOG_MAX_FILE:-3}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidecar-builder:
+    build:
+      context: ./sidecar
+    image: earnapp-orchestrator/redsocks-sidecar:latest
+    profiles:
+      - build-sidecar
+
+  wipter-builder:
+    build:
+      context: ./wipter
+    image: earnapp-orchestrator/wipter-official:latest
+    profiles:
+      - build-wipter
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    container_name: wipter-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    volumes:
+      - ./frontend/.htpasswd:/etc/nginx/.htpasswd:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+        max-file: "${DOCKER_LOG_MAX_FILE:-3}"
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:

@@ -1,0 +1,60 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#eef4fb"/>
+  <rect x="0" y="0" width="210" height="720" fill="#0f172a"/>
+  <rect x="28" y="42" width="42" height="42" rx="10" fill="#16a34a"/>
+  <text x="84" y="58" fill="#f8fafc" font-family="Inter,Arial" font-size="20" font-weight="700">Wipter</text>
+  <text x="84" y="80" fill="#94a3b8" font-family="Inter,Arial" font-size="13">Proxy node control</text>
+  <rect x="20" y="130" width="170" height="42" rx="8" fill="#1e293b"/>
+  <text x="54" y="157" fill="#e2e8f0" font-family="Inter,Arial" font-size="14">Dashboard</text>
+  <text x="54" y="212" fill="#64748b" font-family="Inter,Arial" font-size="14">Nodes</text>
+  <text x="54" y="266" fill="#64748b" font-family="Inter,Arial" font-size="14">Proxies</text>
+  <text x="54" y="320" fill="#64748b" font-family="Inter,Arial" font-size="14">Logs</text>
+  <rect x="210" y="0" width="1070" height="96" fill="#f8fafc"/>
+  <text x="250" y="42" fill="#0f172a" font-family="Inter,Arial" font-size="28" font-weight="800">Wipter Orchestrator</text>
+  <text x="250" y="68" fill="#64748b" font-family="Inter,Arial" font-size="15">Import proxies, save account, connect nodes, and monitor health in one dashboard.</text>
+  <rect x="1052" y="30" width="90" height="40" rx="8" fill="#ffffff" stroke="#dbe4ef"/>
+  <text x="1075" y="55" fill="#334155" font-family="Inter,Arial" font-size="14">Sync</text>
+  <rect x="1156" y="30" width="92" height="40" rx="8" fill="#16a34a"/>
+  <text x="1177" y="55" fill="#ffffff" font-family="Inter,Arial" font-size="14" font-weight="700">Add</text>
+  <g font-family="Inter,Arial">
+    <rect x="250" y="126" width="220" height="102" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+    <text x="274" y="158" fill="#64748b" font-size="13" font-weight="700">NODES RUNNING</text>
+    <text x="274" y="196" fill="#0f172a" font-size="32" font-weight="800">18</text>
+    <text x="320" y="196" fill="#16a34a" font-size="14" font-weight="700">healthy</text>
+    <rect x="494" y="126" width="220" height="102" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+    <text x="518" y="158" fill="#64748b" font-size="13" font-weight="700">PROXY ALIVE</text>
+    <text x="518" y="196" fill="#0f172a" font-size="32" font-weight="800">92%</text>
+    <text x="774" y="126" fill="#64748b" font-size="13" font-weight="700">ACCOUNT</text>
+    <rect x="738" y="126" width="250" height="102" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+    <text x="762" y="196" fill="#16a34a" font-size="18" font-weight="700">Ready to connect</text>
+    <rect x="1012" y="126" width="236" height="102" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+    <text x="1036" y="158" fill="#64748b" font-size="13" font-weight="700">LEAK ALERTS</text>
+    <text x="1036" y="196" fill="#0f172a" font-size="32" font-weight="800">0</text>
+  </g>
+  <rect x="250" y="256" width="380" height="320" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+  <text x="274" y="292" fill="#0f172a" font-family="Inter,Arial" font-size="20" font-weight="800">Proxy Import</text>
+  <rect x="274" y="322" width="332" height="142" rx="8" fill="#f8fafc" stroke="#dbe4ef"/>
+  <text x="294" y="356" fill="#334155" font-family="JetBrains Mono,monospace" font-size="15">socks5://user:pass@203.0.113.7:1080</text>
+  <text x="294" y="386" fill="#334155" font-family="JetBrains Mono,monospace" font-size="15">http://user:pass@198.51.100.9:8080</text>
+  <rect x="458" y="500" width="148" height="44" rx="8" fill="#16a34a"/>
+  <text x="492" y="528" fill="#ffffff" font-family="Inter,Arial" font-size="16" font-weight="700">Provision</text>
+  <rect x="656" y="256" width="592" height="320" rx="10" fill="#ffffff" stroke="#dbe4ef"/>
+  <text x="684" y="292" fill="#0f172a" font-family="Inter,Arial" font-size="20" font-weight="800">Wipter Nodes</text>
+  <line x1="656" y1="326" x2="1248" y2="326" stroke="#dbe4ef"/>
+  <g font-family="Inter,Arial" font-size="15">
+    <text x="684" y="356" fill="#64748b" font-weight="700">Node</text>
+    <text x="846" y="356" fill="#64748b" font-weight="700">Proxy</text>
+    <text x="1010" y="356" fill="#64748b" font-weight="700">Wipter</text>
+    <text x="1124" y="356" fill="#64748b" font-weight="700">IP</text>
+    <text x="684" y="406" fill="#0f172a" font-weight="800">viettel-001</text>
+    <text x="846" y="406" fill="#334155">socks5</text>
+    <rect x="1008" y="382" width="108" height="34" rx="17" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="1030" y="405" fill="#15803d" font-weight="800">connected</text>
+    <text x="1124" y="406" fill="#0f172a">203.0.113.7</text>
+    <text x="684" y="468" fill="#0f172a" font-weight="800">viettel-002</text>
+    <text x="846" y="468" fill="#334155">http</text>
+    <rect x="1008" y="444" width="108" height="34" rx="17" fill="#fff7ed" stroke="#f59e0b"/>
+    <text x="1038" y="467" fill="#b45309" font-weight="800">waiting</text>
+    <text x="1124" y="468" fill="#0f172a">198.51.100.9</text>
+  </g>
+</svg>
