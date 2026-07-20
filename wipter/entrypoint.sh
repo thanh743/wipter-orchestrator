@@ -27,13 +27,43 @@ app_pid=$!
 
 if [ -n "${WIPTER_EMAIL:-}" ] && [ -n "${WIPTER_PASSWORD:-}" ]; then
   (
-    sleep 12
-    log "Attempting first-run credential fill"
-    xdotool search --sync --onlyvisible --class wipter windowactivate 2>/dev/null || true
-    xdotool type --delay 25 "$WIPTER_EMAIL" 2>/dev/null || true
-    xdotool key Tab 2>/dev/null || true
-    xdotool type --delay 25 "$WIPTER_PASSWORD" 2>/dev/null || true
-    xdotool key Return 2>/dev/null || true
+    sleep 10
+    for attempt in 1 2 3 4 5; do
+      log "Attempting first-run credential fill (${attempt}/5)"
+      wid="$(xdotool search --onlyvisible --name Wipter 2>/dev/null | head -n 1 || true)"
+      if [ -z "$wid" ]; then
+        wid="$(xdotool search --onlyvisible --class wipter 2>/dev/null | head -n 1 || true)"
+      fi
+      if [ -z "$wid" ]; then
+        sleep 8
+        continue
+      fi
+
+      xdotool windowactivate "$wid" 2>/dev/null || true
+      sleep 1
+      eval "$(xdotool getwindowgeometry --shell "$wid" 2>/dev/null || true)"
+      width="${WIDTH:-640}"
+      x="${X:-320}"
+      y="${Y:-80}"
+
+      email_x=$((x + width / 2 - 80))
+      email_y=$((y + 258))
+      password_x="$email_x"
+      password_y=$((y + 353))
+      submit_x=$((x + width - 115))
+      submit_y=$((y + 447))
+
+      xdotool mousemove "$email_x" "$email_y" click 1 2>/dev/null || true
+      xdotool key ctrl+a BackSpace 2>/dev/null || true
+      xdotool type --delay 25 "$WIPTER_EMAIL" 2>/dev/null || true
+      sleep 0.2
+      xdotool mousemove "$password_x" "$password_y" click 1 2>/dev/null || true
+      xdotool key ctrl+a BackSpace 2>/dev/null || true
+      xdotool type --delay 25 "$WIPTER_PASSWORD" 2>/dev/null || true
+      sleep 0.2
+      xdotool mousemove "$submit_x" "$submit_y" click 1 2>/dev/null || true
+      sleep 20
+    done
   ) &
 fi
 

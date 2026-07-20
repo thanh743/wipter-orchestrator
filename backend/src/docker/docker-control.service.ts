@@ -186,8 +186,9 @@ export class DockerControlService {
     const suspended = /suspended|banned|not allowed|account disabled|device disabled|account.*suspend|device.*suspend/i.test(logs);
     const appStarted = /wipter.*started|wipter app launched|electron.*ready|xvfb ready|noVNC ready/i.test(logs);
     const loggedIn = /logged in|authenticated|dashboard|online|sharing|connected|isAppConnected:\s*true|Connection established|state update.*Online/i.test(logs);
+    const tunnelTraffic = /destination:\/app\/topic\/tunnel-response|destination:\/topic\/tunnel-request|\bReceived data\b|>>> SEND/i.test(logs);
     const genericError = /\b(uncaught|unhandled|panic|fatal|app crashed|renderer process crashed|segmentation fault)\b/i.test(logs);
-    const connected = loggedIn && !authError && !suspended && !genericError;
+    const connected = (loggedIn || tunnelTraffic) && !authError && !suspended && !genericError;
     let summary = 'Waiting for Wipter connection';
     if (appStarted) summary = 'Wipter app is open, waiting for account/session';
     if (connected) summary = 'Wipter appears connected';
