@@ -148,7 +148,7 @@ export class DockerControlService {
         `WIPTER_PASSWORD=${account.password}`,
         `WIPTER_DEVICE_NAME=${this.wipterDeviceName(proxy.label)}`,
         `WIPTER_DEVICE_ID=${deviceId}`,
-        `XVFB_SCREEN=${this.config.get('WIPTER_XVFB_SCREEN', '1024x720x16')}`,
+        `XVFB_SCREEN=${this.config.get('WIPTER_XVFB_SCREEN', '1280x900x16')}`,
         `WIPTER_ENABLE_VNC=${this.config.get('WIPTER_ENABLE_VNC', 'false')}`,
       ],
       HostConfig: {

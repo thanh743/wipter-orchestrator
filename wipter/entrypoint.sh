@@ -3,7 +3,7 @@ set -euo pipefail
 
 export HOME="${HOME:-/root}"
 export DISPLAY="${DISPLAY:-:99}"
-XVFB_SCREEN="${XVFB_SCREEN:-1024x720x16}"
+XVFB_SCREEN="${XVFB_SCREEN:-1280x900x16}"
 WIPTER_ENABLE_VNC="${WIPTER_ENABLE_VNC:-false}"
 VNC_PASSWORD="${VNC_PASSWORD:-$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)}"
 
