@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Docker = require('dockerode');
+import { execFile } from 'child_process';
 import { resolve4 } from 'dns/promises';
+import { readFile } from 'fs/promises';
+import { cpus, loadavg } from 'os';
+import { promisify } from 'util';
 import { decryptSecret } from '../common/credential-crypto';
 import { ProxyType } from '../common/enums';
 import { ProviderAccountService } from '../provider-account/provider-account.service';
@@ -24,6 +28,8 @@ export type LeakCheckResult = {
   ipv6Blocked: boolean;
 };
 
+const execFileAsync = promisify(execFile);
+
 @Injectable()
 export class DockerControlService {
   private readonly logger = new Logger(DockerControlService.name);
@@ -44,21 +50,35 @@ export class DockerControlService {
     return { ok: true, dryRun: false };
   }
 
-  async systemInfo() {
+  async systemInfo(runningNodes = 0) {
     if (this.dryRun) return { dryRun: true };
-    const [info, df] = await Promise.all([
+    const [info, df, memory, disk] = await Promise.all([
       this.docker.info(),
       this.docker.df().catch(() => undefined),
+      this.hostMemoryInfo(),
+      this.hostDiskInfo(),
     ]);
+    const capacity = this.estimateCapacity({
+      cpus: info.NCPU || cpus().length || 1,
+      runningNodes,
+      memoryAvailableBytes: memory.availableBytes,
+      diskAvailableBytes: disk.availableBytes,
+    });
     return {
       dryRun: false,
       cpus: info.NCPU,
+      loadAverage1m: loadavg()[0],
       memoryBytes: info.MemTotal,
+      memoryAvailableBytes: memory.availableBytes,
+      memoryUsedPercent: memory.usedPercent,
+      diskAvailableBytes: disk.availableBytes,
+      diskUsedPercent: disk.usedPercent,
       containers: info.Containers,
       containersRunning: info.ContainersRunning,
       images: info.Images,
       layersSizeBytes: df?.LayersSize,
       volumes: df?.Volumes?.length ?? 0,
+      capacity,
     };
   }
 
@@ -131,12 +151,12 @@ export class DockerControlService {
       ],
       HostConfig: {
         NetworkMode: `container:${sidecar.id}`,
-        Memory: this.mb('EARNER_MEMORY_MB', 768),
+        Memory: this.mb('EARNER_MEMORY_MB', 512),
         NanoCpus: this.number('EARNER_NANO_CPUS', 500_000_000),
         PidsLimit: this.number('EARNER_PIDS_LIMIT', 256),
         LogConfig: this.logConfig(),
         RestartPolicy: { Name: 'unless-stopped' },
-        ShmSize: 512 * 1024 * 1024,
+        ShmSize: this.mb('EARNER_SHM_MB', 256),
       },
     });
     await earner.start();
@@ -312,6 +332,72 @@ export class DockerControlService {
   private number(name: string, fallback: number) {
     const value = Number(this.config.get(name, fallback));
     return Number.isFinite(value) ? value : fallback;
+  }
+
+  private async hostMemoryInfo() {
+    const meminfo = await readFile('/proc/meminfo', 'utf8').catch(() => '');
+    const values = new Map<string, number>();
+    for (const line of meminfo.split('\n')) {
+      const match = line.match(/^([^:]+):\s+(\d+)\s+kB/);
+      if (match) values.set(match[1], Number(match[2]) * 1024);
+    }
+    const totalBytes = values.get('MemTotal') || 0;
+    const availableBytes = values.get('MemAvailable') || 0;
+    const usedPercent = totalBytes > 0 ? Math.round(((totalBytes - availableBytes) / totalBytes) * 100) : 0;
+    return { totalBytes, availableBytes, usedPercent };
+  }
+
+  private async hostDiskInfo() {
+    const { stdout } = await execFileAsync('df', ['-B1', '/']).catch(() => ({ stdout: '' }));
+    const [, line] = stdout.trim().split('\n');
+    const parts = line?.trim().split(/\s+/) || [];
+    const totalBytes = Number(parts[1]) || 0;
+    const availableBytes = Number(parts[3]) || 0;
+    const usedPercent = Number((parts[4] || '').replace('%', '')) || 0;
+    return { totalBytes, availableBytes, usedPercent };
+  }
+
+  private estimateCapacity(input: { cpus: number; runningNodes: number; memoryAvailableBytes: number; diskAvailableBytes: number }) {
+    const earnerMemoryMb = this.number('EARNER_MEMORY_MB', 512);
+    const sidecarMemoryMb = this.number('SIDECAR_MEMORY_MB', 128);
+    const nodeMemoryBytes = (earnerMemoryMb + sidecarMemoryMb) * 1024 * 1024;
+    const nodeCpu = (this.number('EARNER_NANO_CPUS', 500_000_000) + this.number('SIDECAR_NANO_CPUS', 100_000_000)) / 1_000_000_000;
+    const nodeDiskBytes = this.number('CAPACITY_NODE_DISK_MB', 300) * 1024 * 1024;
+    const memoryReserveBytes = Math.max(this.number('CAPACITY_MEMORY_RESERVE_MB', 512) * 1024 * 1024, Math.round((input.memoryAvailableBytes || 0) * 0.2));
+    const diskReserveBytes = this.number('CAPACITY_DISK_RESERVE_GB', 5) * 1024 * 1024 * 1024;
+    const cpuBudget = Math.max(0, input.cpus * 0.85 - input.runningNodes * nodeCpu);
+    const memoryBudget = Math.max(0, input.memoryAvailableBytes - memoryReserveBytes);
+    const diskBudget = Math.max(0, input.diskAvailableBytes - diskReserveBytes);
+    const byCpu = Math.floor(cpuBudget / Math.max(nodeCpu, 0.1));
+    const byMemory = Math.floor(memoryBudget / Math.max(nodeMemoryBytes, 1));
+    const byDisk = Math.floor(diskBudget / Math.max(nodeDiskBytes, 1));
+    const additionalNodes = Math.max(0, Math.min(byCpu, byMemory, byDisk));
+    const limitingResource = [
+      { name: 'RAM', value: byMemory },
+      { name: 'CPU', value: byCpu },
+      { name: 'Disk', value: byDisk },
+    ].sort((left, right) => left.value - right.value)[0]?.name || 'RAM';
+    const level = additionalNodes <= 0 ? 'danger' : additionalNodes <= 2 ? 'warning' : 'ok';
+    const message = level === 'danger'
+      ? `Không nên thêm node nữa. Điểm nghẽn hiện tại là ${limitingResource}.`
+      : level === 'warning'
+        ? `Chỉ nên thêm khoảng ${additionalNodes} node nữa. Điểm nghẽn gần nhất là ${limitingResource}.`
+        : `Có thể thêm khoảng ${additionalNodes} node nữa trước khi chạm ngưỡng an toàn.`;
+    return {
+      additionalNodes,
+      limitingResource,
+      level,
+      message,
+      perNode: {
+        memoryMb: earnerMemoryMb + sidecarMemoryMb,
+        cpuCores: Number(nodeCpu.toFixed(2)),
+        diskMb: Math.round(nodeDiskBytes / 1024 / 1024),
+      },
+      reserves: {
+        memoryMb: Math.round(memoryReserveBytes / 1024 / 1024),
+        diskGb: Math.round(diskReserveBytes / 1024 / 1024 / 1024),
+      },
+    };
   }
 
   private async inspectIpv6Blocked(sidecarContainerId?: string) {

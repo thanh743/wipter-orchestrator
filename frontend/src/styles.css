@@ -43,6 +43,19 @@ button, input, textarea, select { font: inherit; }
 .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .stat strong { font-size: 28px; line-height: 1; letter-spacing: 0; }
 .stat small { color: var(--muted); }
+.capacityPanel { overflow: hidden; }
+.capacityPanel.ok { border-color: rgba(31,157,114,.35); }
+.capacityPanel.warning { border-color: rgba(201,130,19,.45); }
+.capacityPanel.danger { border-color: rgba(214,75,75,.45); }
+.capacityBody { padding: 16px; display: grid; grid-template-columns: minmax(160px, 220px) 1fr; gap: 16px; align-items: stretch; }
+.capacityHero { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fbfcfe; display: grid; align-content: center; gap: 6px; min-height: 128px; }
+.capacityHero span, .capacityItem span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.capacityHero strong { font-size: 42px; line-height: 1; letter-spacing: 0; }
+.capacityHero small, .capacityItem small { color: var(--muted); }
+.capacityGrid { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 10px; }
+.capacityItem { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.capacityItem strong { font-size: 18px; letter-spacing: 0; overflow-wrap: anywhere; }
+.capacityMessage { grid-column: 2; margin: -2px 0 0; color: var(--muted); font-size: 13px; }
 .grid { display: grid; grid-template-columns: minmax(310px, 410px) minmax(0, 1fr); gap: 18px; align-items: start; }
 .lower { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 18px; }
 .panelHead { padding: 15px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 60px; }
@@ -86,6 +99,9 @@ th { color: var(--muted); font-size: 12px; background: #fbfcfe; }
   .sidebar { padding: 18px 12px; align-items: center; }
   .nav button { justify-content: center; padding: 0; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capacityBody { grid-template-columns: 1fr; }
+  .capacityGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capacityMessage { grid-column: auto; }
   .grid, .lower { grid-template-columns: 1fr; }
   .accountBody { grid-template-columns: 1fr 1fr; }
 }
@@ -96,6 +112,7 @@ th { color: var(--muted); font-size: 12px; background: #fbfcfe; }
   .topbar { flex-direction: column; padding: 16px; }
   .content { padding: 16px; }
   .stats, .formRow { grid-template-columns: 1fr; }
+  .capacityGrid { grid-template-columns: 1fr; }
   .accountBody { grid-template-columns: 1fr; }
   .toolbar input { width: 140px; }
   .drawer { position: static; width: auto; margin: 0 16px 18px; }

@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { Activity, Boxes, CircleDollarSign, ExternalLink, FileText, Gauge, KeyRound, Play, Plus, RefreshCw, RotateCcw, Search, Server, Settings, Square, Trash2, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { io } from 'socket.io-client';
-import { API_BASE_URL, Earner, HealthEvent, ProviderAccount, api } from './lib/api';
+import { API_BASE_URL, Earner, HealthEvent, Metrics, ProviderAccount, api } from './lib/api';
 import './styles.css';
 
 function statusClass(status: string) {
   if (status === 'running' || status === 'alive' || status === 'info' || status === 'connected' || status === 'ready') return 'ok';
   if (status === 'pending' || status === 'warning' || status === 'untested' || status === 'waiting') return 'warn';
-  if (status === 'error' || status === 'dead' || status === 'missing' || status.includes('non residential') || status.includes('ip used') || status.includes('failed')) return 'bad';
+  if (status === 'error' || status === 'dead' || status === 'missing' || status === 'danger' || status.includes('non residential') || status.includes('ip used') || status.includes('failed')) return 'bad';
   return 'idle';
 }
 
@@ -21,6 +21,13 @@ function wipterStatus(earner: Earner) {
   if (message.includes('suspended')) return 'suspended';
   if (message.includes('runtime reported an error')) return 'runtime error';
   return 'waiting';
+}
+
+function formatBytes(value?: number) {
+  if (!value) return '-';
+  if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(1)} GB`;
+  if (value >= 1024 ** 2) return `${Math.round(value / 1024 ** 2)} MB`;
+  return `${Math.round(value / 1024)} KB`;
 }
 
 function App() {
@@ -38,20 +45,23 @@ function App() {
   const [accountEmail, setAccountEmail] = React.useState('');
   const [accountPassword, setAccountPassword] = React.useState('');
   const [accountBusy, setAccountBusy] = React.useState(false);
+  const [metrics, setMetrics] = React.useState<Metrics | null>(null);
 
   const load = React.useCallback(async () => {
     try {
-      const [earnerData, eventData, totalData, accountData] = await Promise.all([
+      const [earnerData, eventData, totalData, accountData, metricData] = await Promise.all([
         api.earners(),
         api.events(),
         api.totalEarnings(),
         api.account(),
+        api.metrics(),
       ]);
       setEarners(earnerData);
       setEvents(eventData);
       setTotal(totalData.total);
       setAccount(accountData);
       setAccountEmail((current) => current || accountData.email);
+      setMetrics(metricData);
       setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Cannot reach backend');
@@ -83,6 +93,7 @@ function App() {
     name: `${index + 1}`,
     balance: Number((Math.max(total, 1) * (0.35 + index * 0.06)).toFixed(2)),
   }));
+  const capacity = metrics?.system.capacity;
 
   async function importProxies() {
     setLoading(true);
@@ -194,6 +205,30 @@ function App() {
             <Stat label="Total balance" value={`$${total.toFixed(2)}`} sub="Sẵn sàng nối snapshot thực tế" />
             <Stat label="IP leak alerts" value={errors} sub="Tự dừng earner khi IP lệch" />
           </div>
+
+          <section className={`panel capacityPanel ${capacity?.level || 'idle'}`}>
+            <div className="panelHead split">
+              <div>
+                <h2>VPS Capacity</h2>
+                <span>Ước tính theo RAM/CPU/Disk hiện tại và giới hạn tài nguyên mỗi node.</span>
+              </div>
+              <Badge value={capacity?.level === 'danger' ? 'danger' : capacity?.level === 'warning' ? 'warning' : 'ok'} />
+            </div>
+            <div className="capacityBody">
+              <div className="capacityHero">
+                <span>Có thể thêm</span>
+                <strong>{capacity?.additionalNodes ?? '-'}</strong>
+                <small>node nữa trước ngưỡng an toàn</small>
+              </div>
+              <div className="capacityGrid">
+                <CapacityItem label="RAM còn trống" value={formatBytes(metrics?.system.memoryAvailableBytes)} sub={`${metrics?.system.memoryUsedPercent ?? '-'}% đã dùng`} />
+                <CapacityItem label="CPU" value={`${metrics?.system.cpus ?? '-'} core`} sub={`load ${metrics?.system.loadAverage1m?.toFixed(2) ?? '-'}`} />
+                <CapacityItem label="Disk còn trống" value={formatBytes(metrics?.system.diskAvailableBytes)} sub={`${metrics?.system.diskUsedPercent ?? '-'}% đã dùng`} />
+                <CapacityItem label="Ước tính / node" value={`${capacity?.perNode.memoryMb ?? '-'} MB`} sub={`${capacity?.perNode.cpuCores ?? '-'} CPU, ${capacity?.perNode.diskMb ?? '-'} MB disk`} />
+              </div>
+              <p className="capacityMessage">{capacity?.message || 'Đang chờ dữ liệu VPS.'}</p>
+            </div>
+          </section>
 
           <section className="panel accountPanel">
             <div className="panelHead split">
@@ -313,6 +348,10 @@ function App() {
 
 function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub: string }) {
   return <article className="stat"><span>{label}</span><strong>{value}</strong><small>{sub}</small></article>;
+}
+
+function CapacityItem({ label, value, sub }: { label: string; value: React.ReactNode; sub: string }) {
+  return <div className="capacityItem"><span>{label}</span><strong>{value}</strong><small>{sub}</small></div>;
 }
 
 function PanelTitle({ title, subtitle }: { title: string; subtitle: string }) {

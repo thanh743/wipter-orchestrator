@@ -46,6 +46,42 @@ export type ProviderAccount = {
   source: 'database' | 'env' | 'missing';
 };
 
+export type Metrics = {
+  earners: {
+    total: number;
+    running: number;
+    pending: number;
+    errors: number;
+    connected: number;
+  };
+  system: {
+    cpus?: number;
+    loadAverage1m?: number;
+    memoryBytes?: number;
+    memoryAvailableBytes?: number;
+    memoryUsedPercent?: number;
+    diskAvailableBytes?: number;
+    diskUsedPercent?: number;
+    containersRunning?: number;
+    images?: number;
+    capacity?: {
+      additionalNodes: number;
+      limitingResource: string;
+      level: 'ok' | 'warning' | 'danger';
+      message: string;
+      perNode: {
+        memoryMb: number;
+        cpuCores: number;
+        diskMb: number;
+      };
+      reserves: {
+        memoryMb: number;
+        diskGb: number;
+      };
+    };
+  };
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -59,6 +95,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<{ ok: boolean }>('/health'),
+  metrics: () => request<Metrics>('/metrics'),
   earners: () => request<Earner[]>('/earners'),
   summary: () => request<{ total: number; running: number; pending: number; errors: number; aliveProxies: number }>('/earners/summary'),
   events: () => request<HealthEvent[]>('/health-events'),

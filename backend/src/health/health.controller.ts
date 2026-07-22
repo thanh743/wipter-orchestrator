@@ -51,7 +51,7 @@ export class HealthController {
       proxies: { total: totalProxies, alive: aliveProxies },
       healthEvents: events,
       docker: await this.docker.ping(),
-      system: await this.docker.systemInfo(),
+      system: await this.docker.systemInfo(running),
       at: new Date().toISOString(),
     };
   }
