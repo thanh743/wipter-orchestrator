@@ -53,6 +53,20 @@ curl -fsSL https://raw.githubusercontent.com/thanh743/wipter-orchestrator/main/s
 bash /tmp/install-wipter.sh
 ```
 
+Cách nhanh nhất, dùng file cài nhanh:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thanh743/wipter-orchestrator/main/scripts/quick-install.sh -o /tmp/quick-install-wipter.sh
+DASHBOARD_PASSWORD='routerProxy' bash /tmp/quick-install-wipter.sh
+```
+
+Nếu muốn xoá sạch và cài lại từ đầu để test:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thanh743/wipter-orchestrator/main/scripts/quick-reinstall.sh -o /tmp/reinstall-wipter.sh
+RESET_WIPTER=true DASHBOARD_PASSWORD='routerProxy' bash /tmp/reinstall-wipter.sh
+```
+
 Script sẽ tự làm toàn bộ:
 
 - Cài Docker

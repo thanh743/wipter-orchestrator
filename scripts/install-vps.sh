@@ -4,6 +4,7 @@ set -Eeuo pipefail
 APP_DIR="${APP_DIR:-/opt/wipter-orchestrator}"
 REPO_URL="${REPO_URL:-https://github.com/thanh743/wipter-orchestrator.git}"
 BRANCH="${BRANCH:-main}"
+BACKEND_HOST_PORT="${BACKEND_HOST_PORT:-4000}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 DASHBOARD_USER="${DASHBOARD_USER:-admin}"
 DASHBOARD_PASSWORD="${DASHBOARD_PASSWORD:-}"
@@ -105,6 +106,7 @@ write_env() {
     cat > .env <<EOF
 NODE_ENV=production
 APP_PORT=4000
+BACKEND_HOST_PORT=${BACKEND_HOST_PORT}
 APP_HOST=0.0.0.0
 FRONTEND_PORT=${FRONTEND_PORT}
 CORS_ORIGIN=http://localhost:${FRONTEND_PORT}

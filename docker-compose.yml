@@ -4,15 +4,15 @@ services:
     container_name: wipter-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: 
-      POSTGRES_USER: 
-      POSTGRES_PASSWORD: 
+      POSTGRES_DB: ${POSTGRES_DB:-wipter_orchestrator}
+      POSTGRES_USER: ${POSTGRES_USER:-wipter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U  -d "]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wipter} -d ${POSTGRES_DB:-wipter_orchestrator}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,7 +54,7 @@ services:
       REDIS_PORT: 6379
       DRY_RUN_DOCKER: ${DRY_RUN_DOCKER:-false}
     ports:
-      - "127.0.0.1:${APP_PORT:-4000}:4000"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-4000}:4000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     logging:
