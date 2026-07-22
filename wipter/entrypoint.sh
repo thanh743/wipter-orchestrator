@@ -3,6 +3,8 @@ set -euo pipefail
 
 export HOME="${HOME:-/root}"
 export DISPLAY="${DISPLAY:-:99}"
+XVFB_SCREEN="${XVFB_SCREEN:-1024x720x16}"
+WIPTER_ENABLE_VNC="${WIPTER_ENABLE_VNC:-false}"
 VNC_PASSWORD="${VNC_PASSWORD:-$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)}"
 
 log() {
@@ -14,15 +16,30 @@ cleanup() {
 }
 trap cleanup TERM INT
 
-Xvfb "$DISPLAY" -screen 0 1280x900x24 -nolisten tcp &
+touch /tmp/openbox.log /tmp/x11vnc.log /tmp/wipter-app.log
+
+Xvfb "$DISPLAY" -screen 0 "$XVFB_SCREEN" -nolisten tcp +extension RANDR &
 sleep 1
 openbox >/tmp/openbox.log 2>&1 &
-x11vnc -display "$DISPLAY" -localhost -passwd "$VNC_PASSWORD" -forever -shared >/tmp/x11vnc.log 2>&1 &
+if [ "$WIPTER_ENABLE_VNC" = "true" ]; then
+  x11vnc -display "$DISPLAY" -localhost -passwd "$VNC_PASSWORD" -forever -shared >/tmp/x11vnc.log 2>&1 &
+else
+  log "VNC disabled to save memory"
+fi
 
-log "Xvfb ready on ${DISPLAY}"
+log "Xvfb ready on ${DISPLAY} (${XVFB_SCREEN})"
 log "Wipter app launching"
 
-/opt/wipter/wipter-app --no-sandbox --disable-dev-shm-usage >/tmp/wipter-app.log 2>&1 &
+/opt/wipter/wipter-app \
+  --no-sandbox \
+  --disable-dev-shm-usage \
+  --disable-gpu \
+  --disable-software-rasterizer \
+  --disable-extensions \
+  --disable-background-timer-throttling \
+  --disk-cache-size=16777216 \
+  --media-cache-size=16777216 \
+  >/tmp/wipter-app.log 2>&1 &
 app_pid=$!
 
 if [ -n "${WIPTER_EMAIL:-}" ] && [ -n "${WIPTER_PASSWORD:-}" ]; then

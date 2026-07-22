@@ -148,15 +148,17 @@ export class DockerControlService {
         `WIPTER_PASSWORD=${account.password}`,
         `WIPTER_DEVICE_NAME=${this.wipterDeviceName(proxy.label)}`,
         `WIPTER_DEVICE_ID=${deviceId}`,
+        `XVFB_SCREEN=${this.config.get('WIPTER_XVFB_SCREEN', '1024x720x16')}`,
+        `WIPTER_ENABLE_VNC=${this.config.get('WIPTER_ENABLE_VNC', 'false')}`,
       ],
       HostConfig: {
         NetworkMode: `container:${sidecar.id}`,
-        Memory: this.mb('EARNER_MEMORY_MB', 512),
-        NanoCpus: this.number('EARNER_NANO_CPUS', 500_000_000),
+        Memory: this.mb('EARNER_MEMORY_MB', 384),
+        NanoCpus: this.number('EARNER_NANO_CPUS', 400_000_000),
         PidsLimit: this.number('EARNER_PIDS_LIMIT', 256),
         LogConfig: this.logConfig(),
         RestartPolicy: { Name: 'unless-stopped' },
-        ShmSize: this.mb('EARNER_SHM_MB', 256),
+        ShmSize: this.mb('EARNER_SHM_MB', 128),
       },
     });
     await earner.start();
@@ -358,12 +360,12 @@ export class DockerControlService {
   }
 
   private estimateCapacity(input: { cpus: number; runningNodes: number; memoryAvailableBytes: number; diskAvailableBytes: number }) {
-    const earnerMemoryMb = this.number('EARNER_MEMORY_MB', 512);
+    const earnerMemoryMb = this.number('EARNER_MEMORY_MB', 384);
     const sidecarMemoryMb = this.number('SIDECAR_MEMORY_MB', 128);
     const nodeMemoryBytes = (earnerMemoryMb + sidecarMemoryMb) * 1024 * 1024;
-    const nodeCpu = (this.number('EARNER_NANO_CPUS', 500_000_000) + this.number('SIDECAR_NANO_CPUS', 100_000_000)) / 1_000_000_000;
-    const nodeDiskBytes = this.number('CAPACITY_NODE_DISK_MB', 300) * 1024 * 1024;
-    const memoryReserveBytes = Math.max(this.number('CAPACITY_MEMORY_RESERVE_MB', 512) * 1024 * 1024, Math.round((input.memoryAvailableBytes || 0) * 0.2));
+    const nodeCpu = (this.number('EARNER_NANO_CPUS', 400_000_000) + this.number('SIDECAR_NANO_CPUS', 100_000_000)) / 1_000_000_000;
+    const nodeDiskBytes = this.number('CAPACITY_NODE_DISK_MB', 200) * 1024 * 1024;
+    const memoryReserveBytes = Math.max(this.number('CAPACITY_MEMORY_RESERVE_MB', 384) * 1024 * 1024, Math.round((input.memoryAvailableBytes || 0) * 0.2));
     const diskReserveBytes = this.number('CAPACITY_DISK_RESERVE_GB', 5) * 1024 * 1024 * 1024;
     const cpuBudget = Math.max(0, input.cpus * 0.85 - input.runningNodes * nodeCpu);
     const memoryBudget = Math.max(0, input.memoryAvailableBytes - memoryReserveBytes);
