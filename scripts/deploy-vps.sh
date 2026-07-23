@@ -12,5 +12,5 @@ docker compose --profile build-sidecar --profile build-wipter build sidecar-buil
 docker compose up -d --build postgres redis backend frontend
 
 echo "Wipter Orchestrator is running."
-echo "Frontend: http://SERVER_IP:5173"
+echo "Frontend: http://SERVER_IP:5174"
 echo "Backend is bound to 127.0.0.1 and is available through /api on the frontend."

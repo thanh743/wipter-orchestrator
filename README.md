@@ -86,7 +86,7 @@ Sau khi chạy xong, bạn sẽ thấy dạng:
 
 ```text
 Open:
-  http://IP_VPS:5173
+  http://IP_VPS:5174
 
 Dashboard login:
   User: admin

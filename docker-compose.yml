@@ -54,7 +54,7 @@ services:
       REDIS_PORT: 6379
       DRY_RUN_DOCKER: ${DRY_RUN_DOCKER:-false}
     ports:
-      - "127.0.0.1:${BACKEND_HOST_PORT:-4000}:4000"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-4101}:4000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     logging:
@@ -91,7 +91,7 @@ services:
     container_name: wipter-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${FRONTEND_PORT:-5174}:80"
     volumes:
       - ./frontend/.htpasswd:/etc/nginx/.htpasswd:ro
     logging:
