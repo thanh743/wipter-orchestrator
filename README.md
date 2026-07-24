@@ -95,6 +95,13 @@ Dashboard login:
 
 Mở link đó trong trình duyệt.
 
+Port mặc định khi cài chung nhiều bộ:
+
+- Dashboard: `5174`
+- Backend nội bộ host: `4101`
+- PostgreSQL host: `55433`
+- Redis host: `56380`
+
 ## Cài Đặt Với Mật Khẩu Dashboard Tự Chọn
 
 Nếu muốn đặt mật khẩu dashboard dễ nhớ:
